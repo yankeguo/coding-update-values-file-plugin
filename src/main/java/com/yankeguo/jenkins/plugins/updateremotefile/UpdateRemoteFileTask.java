@@ -1,10 +1,13 @@
 package com.yankeguo.jenkins.plugins.updateremotefile;
 
+import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.matchers.ConstantMatcher;
+import com.yankeguo.jenkins.plugins.updateremotefile.providers.CodingRepositoryProviderFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import groovy.lang.Binding;
+import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import hudson.Extension;
 import hudson.Launcher;
@@ -19,6 +22,8 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -27,6 +32,14 @@ import java.util.*;
 public class UpdateRemoteFileTask extends Builder {
 
     private static final String PROVIDER_CODING_REPO = "coding-repo";
+
+    private static final Map<String, ProviderFactory> FACTORIES = new HashMap<>();
+
+    static {
+        FACTORIES.put(PROVIDER_CODING_REPO, new CodingRepositoryProviderFactory());
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(UpdateRemoteFileTask.class);
 
     private final String provider;
 
@@ -64,15 +77,71 @@ public class UpdateRemoteFileTask extends Builder {
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         PrintStream logger = listener.getLogger();
-        HashMap<String, Object> val = new HashMap<>();
-        Map<String, String> env = build.getEnvironment(listener);
-        Binding binding = new Binding();
-        System.out.println(env);
-        binding.setVariable("env", env);
-        binding.setVariable("val", val);
-        GroovyShell shell = new GroovyShell(binding);
-        shell.evaluate(getScript());
-        System.out.println(val);
+
+        if (getProvider() == null || getProvider().isBlank()) {
+            logger.println("Provider not set");
+            return false;
+        }
+
+        ProviderFactory factory = FACTORIES.get(getProvider());
+
+        if (factory == null) {
+            logger.println("Provider not found");
+            return false;
+        }
+
+        if (getCredentialsId() == null || getCredentialsId().isBlank()) {
+            logger.println("Credentials not set");
+            return false;
+        }
+
+        StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(
+                getCredentialsId(),
+                StandardUsernamePasswordCredentials.class,
+                build,
+                Collections.emptyList()
+        );
+
+        if (credentials == null) {
+            logger.println("Credentials not found");
+            return false;
+        }
+
+        if (getTargets() == null || getTargets().isBlank()) {
+            logger.println("Targets not set");
+            return false;
+        }
+
+        if (getScript() == null || getScript().isBlank()) {
+            logger.println("Script not set");
+            return false;
+        }
+
+        for (String s : getTargets().split("\n")) {
+            s = s.trim();
+            if (s.isEmpty()) {
+                continue;
+            }
+            try {
+                Provider provider = factory.create(credentials.getUsername(), credentials.getPassword().getPlainText(), s);
+                Map<String, Object> val = provider.fetch();
+                Map<String, String> env = build.getEnvironment(listener);
+
+                Binding binding = new Binding();
+                binding.setVariable("env", env);
+                binding.setVariable("val", val);
+
+                GroovyShell shell = new GroovyShell(binding);
+                shell.evaluate(getScript());
+
+                provider.update(val);
+            } catch (ProviderException | GroovyRuntimeException e) {
+                e.printStackTrace(logger);
+                logger.println("Failed to run script for target " + s);
+                return false;
+            }
+        }
+
         return true;
     }
 

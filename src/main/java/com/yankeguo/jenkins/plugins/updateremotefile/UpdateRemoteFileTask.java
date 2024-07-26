@@ -4,8 +4,11 @@ import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.matchers.ConstantMatcher;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import groovy.lang.Binding;
+import groovy.lang.GroovyShell;
 import hudson.Extension;
 import hudson.Launcher;
+import hudson.model.Queue;
 import hudson.model.*;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
@@ -18,9 +21,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Locale;
-import java.util.UUID;
+import java.io.PrintStream;
+import java.util.*;
 
 public class UpdateRemoteFileTask extends Builder {
 
@@ -32,15 +34,15 @@ public class UpdateRemoteFileTask extends Builder {
 
     private final String targets;
 
-    private final String entries;
+    private final String script;
 
     @DataBoundConstructor
-    public UpdateRemoteFileTask(String provider, String credentialsId, String targets, String entries) {
+    public UpdateRemoteFileTask(String provider, String credentialsId, String targets, String script) {
         super();
         this.provider = provider;
         this.credentialsId = credentialsId;
         this.targets = targets;
-        this.entries = entries;
+        this.script = script;
     }
 
     public String getProvider() {
@@ -55,16 +57,22 @@ public class UpdateRemoteFileTask extends Builder {
         return targets;
     }
 
-    public String getEntries() {
-        return entries;
+    public String getScript() {
+        return script;
     }
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
-        System.out.println("Provider: " + getProvider());
-        System.out.println("Credentials ID: " + getCredentialsId());
-        System.out.println("Targets: " + getTargets());
-        System.out.println("Entries: " + getEntries());
+        PrintStream logger = listener.getLogger();
+        HashMap<String, Object> val = new HashMap<>();
+        Map<String, String> env = build.getEnvironment(listener);
+        Binding binding = new Binding();
+        System.out.println(env);
+        binding.setVariable("env", env);
+        binding.setVariable("val", val);
+        GroovyShell shell = new GroovyShell(binding);
+        shell.evaluate(getScript());
+        System.out.println(val);
         return true;
     }
 
@@ -125,7 +133,7 @@ public class UpdateRemoteFileTask extends Builder {
             if (Locale.getDefault().getLanguage().equals("zh")) {
                 return "更新远程文件（CODING 仓库等）";
             }
-            return "Update remote file (CODING Repo, etc.)";
+            return "Update remote file (CODING repository, etc.)";
         }
     }
 }

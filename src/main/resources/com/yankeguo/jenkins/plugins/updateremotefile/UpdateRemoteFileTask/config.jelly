@@ -12,7 +12,7 @@
     <f:entry title="${%Targets}" field="targets" description="${%TargetsDesc}">
         <f:textarea/>
     </f:entry>
-    <f:entry title="${%Entries}" field="entries" description="${%EntriesDesc}">
+    <f:entry title="${%Script}" field="script" description="${%ScriptDesc}">
         <f:textarea/>
     </f:entry>
 </j:jelly>

@@ -95,7 +95,12 @@ public class ModstateTask extends Builder {
             return false;
         }
 
-        StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(getCredentialsId(), StandardUsernamePasswordCredentials.class, build, Collections.emptyList());
+        StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(
+                getCredentialsId(),
+                StandardUsernamePasswordCredentials.class,
+                build,
+                Collections.emptyList()
+        );
 
         if (credentials == null) {
             logger.println("Credentials not found");
@@ -166,7 +171,13 @@ public class ModstateTask extends Builder {
                 @SuppressWarnings("deprecation") Item fakeProject = new FreeStyleProject(Jenkins.get(), "fake-" + UUID.randomUUID());
                 project = fakeProject;
             }
-            return new StandardListBoxModel().includeEmptyValue().includeMatchingAs(project instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) project) : ACL.SYSTEM, project, StandardUsernamePasswordCredentials.class, new ArrayList<>(), new ConstantMatcher(true)).includeCurrentValue(credentialsId);
+            return new StandardListBoxModel().includeEmptyValue().includeMatchingAs(
+                    project instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) project) : ACL.SYSTEM,
+                    project,
+                    StandardUsernamePasswordCredentials.class,
+                    new ArrayList<>(),
+                    new ConstantMatcher(true)
+            ).includeCurrentValue(credentialsId);
         }
 
         public ListBoxModel doFillProviderItems() {

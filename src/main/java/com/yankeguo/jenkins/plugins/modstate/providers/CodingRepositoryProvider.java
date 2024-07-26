@@ -126,7 +126,11 @@ public class CodingRepositoryProvider implements Provider {
 
     @Override
     public Object fetch() throws ProviderException {
-        CodingHybridResponse.Response res = invokeAPI("DescribeGitFile", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "Path", getPath()));
+        CodingHybridResponse.Response res = invokeAPI("DescribeGitFile", Map.of(
+                "DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(),
+                "Ref", getBranch(),
+                "Path", getPath()
+        ));
         CodingHybridResponse.Response.GitFile gf = res.getGitFile();
 
         if (gf == null) {
@@ -157,7 +161,12 @@ public class CodingRepositoryProvider implements Provider {
             throw new ProviderException("Failed to marshal value", e);
         }
 
-        CodingHybridResponse.Response response = invokeAPI("DescribeGitCommitInfos", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "PageNumber", 1, "PageSize", 1));
+        CodingHybridResponse.Response response = invokeAPI("DescribeGitCommitInfos", Map.of(
+                "DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(),
+                "Ref", getBranch(),
+                "PageNumber", 1,
+                "PageSize", 1
+        ));
         List<CodingHybridResponse.Response.Commit> commits = response.getCommits();
         if (commits == null || commits.isEmpty()) {
             throw new ProviderException("No commits found in branch: " + getBranch());
@@ -166,7 +175,17 @@ public class CodingRepositoryProvider implements Provider {
         if (sha == null || sha.isBlank()) {
             throw new ProviderException("No commit hash found for branch: " + getBranch());
         }
-        CodingHybridResponse.Response response1 = invokeAPI("ModifyGitFiles", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "LastCommitSha", sha, "Message", "ci: update " + getPath(), "GitFiles", List.of(Map.of("Path", getPath(), "Content", content))));
+        CodingHybridResponse.Response response1 = invokeAPI("ModifyGitFiles", Map.of(
+                "DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(),
+                "Ref", getBranch(),
+                "LastCommitSha", sha,
+                "Message", "ci: update " + getPath(),
+                "GitFiles", List.of(Map.of(
+                                "Path", getPath(),
+                                "Content", content
+                        )
+                ))
+        );
         CodingHybridResponse.Response.Commit gitCommit = response1.getGitCommit();
         if (gitCommit == null || gitCommit.getSha() == null || gitCommit.getSha().isBlank()) {
             throw new ProviderException("Failed to create commit");

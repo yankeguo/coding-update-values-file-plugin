@@ -1,5 +1,4 @@
 <?jelly escape-by-default='true'?>
 <div>
-    This plugin allows you to update a values file in a git repository hosted on <em>coding.net</em> by invoking it's
-    OpenAPI
+    A Jenkins plugin designed to update a values file within a repository hosted on coding.net
 </div>

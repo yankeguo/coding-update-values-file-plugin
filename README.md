@@ -2,7 +2,7 @@
 
 ## Introduction
 
-TODO Describe what your plugin does here
+A Jenkins plugin designed to update a values file within a repository hosted on coding.net
 
 ## Getting started
 

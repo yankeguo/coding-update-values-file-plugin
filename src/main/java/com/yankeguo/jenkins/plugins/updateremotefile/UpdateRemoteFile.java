@@ -1,4 +1,4 @@
-package com.yankeguo.jenkins.plugins.coding_update_values_file;
+package com.yankeguo.jenkins.plugins.updateremotefile;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -13,10 +13,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.io.IOException;
 import java.util.Locale;
 
-public class CodingUpdateValuesFile extends Builder {
+public class UpdateRemoteFile extends Builder {
 
     @DataBoundConstructor
-    public CodingUpdateValuesFile() {
+    public UpdateRemoteFile() {
     }
 
     @Override
@@ -29,7 +29,7 @@ public class CodingUpdateValuesFile extends Builder {
     public static final class BuildStepDescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public BuildStepDescriptorImpl() {
-            super(CodingUpdateValuesFile.class);
+            super(UpdateRemoteFile.class);
             load();
         }
 
@@ -43,9 +43,9 @@ public class CodingUpdateValuesFile extends Builder {
         public String getDisplayName() {
             Locale currentLocale = Locale.getDefault();
             if (currentLocale.getLanguage().equals("zh")) {
-                return "更新 CODING 仓库中的键值文件";
+                return "更新远程文件（CODING 仓库等）";
             }
-            return "Update values file in a CODING repository";
+            return "Update remote file (CODING Repo, etc.)";
         }
     }
 }

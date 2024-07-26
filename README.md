@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A Jenkins plugin designed to update a values file within a repository hosted on CODING
+A Jenkins plugin designed to update a file within a hosted repository
 
 ## Getting started
 

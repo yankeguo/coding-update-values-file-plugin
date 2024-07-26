@@ -33,7 +33,7 @@
     <properties>
         <revision>1.0</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.361</jenkins.version>
+        <jenkins.version>2.361.1</jenkins.version>
         <gitHubRepo>yankeguo/${project.artifactId}-plugin</gitHubRepo>
         <spotless.check.skip>false</spotless.check.skip>
     </properties>
@@ -49,6 +49,13 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>credentials</artifactId>
+        </dependency>
+    </dependencies>
 
     <repositories>
         <repository>

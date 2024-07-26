@@ -1,0 +1,18 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core"
+         xmlns:f="/lib/form"
+         xmlns:c="/lib/credentials"
+>
+    <f:entry title="${%Provider}" field="provider">
+        <f:select/>
+    </f:entry>
+    <f:entry title="${%CredentialsId}" field="credentialsId">
+        <c:select/>
+    </f:entry>
+    <f:entry title="${%Targets}" field="targets" description="${%TargetsDesc}">
+        <f:textarea/>
+    </f:entry>
+    <f:entry title="${%Entries}" field="entries" description="${%EntriesDesc}">
+        <f:textarea/>
+    </f:entry>
+</j:jelly>

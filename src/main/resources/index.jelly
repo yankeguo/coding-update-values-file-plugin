@@ -1,0 +1,5 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin allows you to update a values file in a git repository hosted on <em>coding.net</em> by invoking it's
+    OpenAPI
+</div>

@@ -1,0 +1,2 @@
+_extends: .github
+tag-template: coding-update-values-file-plugin-$NEXT_MINOR_VERSION

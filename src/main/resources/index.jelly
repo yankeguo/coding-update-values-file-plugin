@@ -1,4 +1,4 @@
 <?jelly escape-by-default='true'?>
 <div>
-    A Jenkins plugin designed to update a file within a hosted repository
+    A Jenkins plugin that uses Groovy script to modify remote state and bridge with GitOps systems
 </div>

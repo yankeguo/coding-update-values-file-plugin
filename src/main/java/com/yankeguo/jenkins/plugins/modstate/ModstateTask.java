@@ -1,10 +1,10 @@
-package com.yankeguo.jenkins.plugins.updateremotefile;
+package com.yankeguo.jenkins.plugins.modstate;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.matchers.ConstantMatcher;
-import com.yankeguo.jenkins.plugins.updateremotefile.providers.CodingRepositoryProviderFactory;
+import com.yankeguo.jenkins.plugins.modstate.providers.CodingRepositoryProviderFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import groovy.lang.Binding;
 import groovy.lang.GroovyRuntimeException;
@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
-public class UpdateRemoteFileTask extends Builder {
+public class ModstateTask extends Builder {
 
     private static final String PROVIDER_CODING_REPO = "coding-repo";
 
@@ -39,7 +39,7 @@ public class UpdateRemoteFileTask extends Builder {
         FACTORIES.put(PROVIDER_CODING_REPO, new CodingRepositoryProviderFactory());
     }
 
-    private static final Logger log = LoggerFactory.getLogger(UpdateRemoteFileTask.class);
+    private static final Logger log = LoggerFactory.getLogger(ModstateTask.class);
 
     private final String provider;
 
@@ -50,7 +50,7 @@ public class UpdateRemoteFileTask extends Builder {
     private final String script;
 
     @DataBoundConstructor
-    public UpdateRemoteFileTask(String provider, String credentialsId, String targets, String script) {
+    public ModstateTask(String provider, String credentialsId, String targets, String script) {
         super();
         this.provider = provider;
         this.credentialsId = credentialsId;
@@ -95,12 +95,7 @@ public class UpdateRemoteFileTask extends Builder {
             return false;
         }
 
-        StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(
-                getCredentialsId(),
-                StandardUsernamePasswordCredentials.class,
-                build,
-                Collections.emptyList()
-        );
+        StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(getCredentialsId(), StandardUsernamePasswordCredentials.class, build, Collections.emptyList());
 
         if (credentials == null) {
             logger.println("Credentials not found");
@@ -117,14 +112,15 @@ public class UpdateRemoteFileTask extends Builder {
             return false;
         }
 
-        for (String s : getTargets().split("\n")) {
-            s = s.trim();
-            if (s.isEmpty()) {
+        for (String target : getTargets().split("\n")) {
+            target = target.trim();
+            if (target.isEmpty()) {
                 continue;
             }
             try {
-                Provider provider = factory.create(credentials.getUsername(), credentials.getPassword().getPlainText(), s);
-                Map<String, Object> val = provider.fetch();
+                Provider provider = factory.create(credentials.getUsername(), credentials.getPassword().getPlainText(), target);
+                logger.println("Modstate: fetching target: " + target);
+                Object val = provider.fetch();
                 Map<String, String> env = build.getEnvironment(listener);
 
                 Binding binding = new Binding();
@@ -133,14 +129,16 @@ public class UpdateRemoteFileTask extends Builder {
 
                 GroovyShell shell = new GroovyShell(binding);
                 shell.evaluate(getScript());
-
+                logger.println("Modstate: updating target: " + target);
                 provider.update(val);
             } catch (ProviderException | GroovyRuntimeException e) {
                 e.printStackTrace(logger);
-                logger.println("Failed to run script for target " + s);
+                logger.println("Modstate: Failed to run script for target: " + target);
                 return false;
             }
         }
+
+        logger.println("Modstate: all done");
 
         return true;
     }
@@ -149,7 +147,7 @@ public class UpdateRemoteFileTask extends Builder {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public DescriptorImpl() {
-            super(UpdateRemoteFileTask.class);
+            super(ModstateTask.class);
             load();
         }
 
@@ -158,32 +156,17 @@ public class UpdateRemoteFileTask extends Builder {
             return true;
         }
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project,
-                                                     @QueryParameter String url,
-                                                     @QueryParameter String credentialsId) {
-            if (project == null && !Jenkins.get().hasPermission(Jenkins.ADMINISTER) ||
-                    project != null && !project.hasPermission(Item.EXTENDED_READ)) {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item project, @QueryParameter String url, @QueryParameter String credentialsId) {
+            if (project == null && !Jenkins.get().hasPermission(Jenkins.ADMINISTER) || project != null && !project.hasPermission(Item.EXTENDED_READ)) {
                 return new StandardListBoxModel().includeCurrentValue(credentialsId);
             }
             if (project == null) {
                 /* Construct a fake project, suppress the deprecation warning because the
                  * replacement for the deprecated API isn't accessible in this context. */
-                @SuppressWarnings("deprecation")
-                Item fakeProject = new FreeStyleProject(Jenkins.get(), "fake-" + UUID.randomUUID());
+                @SuppressWarnings("deprecation") Item fakeProject = new FreeStyleProject(Jenkins.get(), "fake-" + UUID.randomUUID());
                 project = fakeProject;
             }
-            return new StandardListBoxModel()
-                    .includeEmptyValue()
-                    .includeMatchingAs(
-                            project instanceof Queue.Task
-                                    ? Tasks.getAuthenticationOf((Queue.Task) project)
-                                    : ACL.SYSTEM,
-                            project,
-                            StandardUsernamePasswordCredentials.class,
-                            new ArrayList<>(),
-                            new ConstantMatcher(true)
-                    )
-                    .includeCurrentValue(credentialsId);
+            return new StandardListBoxModel().includeEmptyValue().includeMatchingAs(project instanceof Queue.Task ? Tasks.getAuthenticationOf((Queue.Task) project) : ACL.SYSTEM, project, StandardUsernamePasswordCredentials.class, new ArrayList<>(), new ConstantMatcher(true)).includeCurrentValue(credentialsId);
         }
 
         public ListBoxModel doFillProviderItems() {
@@ -200,9 +183,9 @@ public class UpdateRemoteFileTask extends Builder {
         @Override
         public String getDisplayName() {
             if (Locale.getDefault().getLanguage().equals("zh")) {
-                return "更新远程文件（CODING 仓库等）";
+                return "更新远程状态";
             }
-            return "Update remote file (CODING repository, etc.)";
+            return "Modify Remote State";
         }
     }
 }

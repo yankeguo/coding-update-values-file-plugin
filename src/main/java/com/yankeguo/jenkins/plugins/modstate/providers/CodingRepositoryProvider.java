@@ -1,8 +1,8 @@
-package com.yankeguo.jenkins.plugins.updateremotefile.providers;
+package com.yankeguo.jenkins.plugins.modstate.providers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yankeguo.jenkins.plugins.updateremotefile.Provider;
-import com.yankeguo.jenkins.plugins.updateremotefile.ProviderException;
+import com.yankeguo.jenkins.plugins.modstate.Provider;
+import com.yankeguo.jenkins.plugins.modstate.ProviderException;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -12,6 +12,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 public class CodingRepositoryProvider implements Provider {
@@ -31,16 +32,16 @@ public class CodingRepositoryProvider implements Provider {
         return password;
     }
 
-    public String getRepository() {
-        return repository;
-    }
-
     public String getTenant() {
         return tenant;
     }
 
     public String getProject() {
         return project;
+    }
+
+    public String getRepository() {
+        return repository;
     }
 
     public String getBranch() {
@@ -64,28 +65,28 @@ public class CodingRepositoryProvider implements Provider {
 
                 HttpEntity entity = response.getEntity();
                 if (entity == null) {
-                    throw new ProviderException("HTTP Failed");
+                    throw new ProviderException("HTTP failed: no response body");
                 }
                 if (response.getStatusLine().getStatusCode() != 200) {
-                    throw new ProviderException("HTTP Failed: " + response.getStatusLine().getStatusCode());
+                    throw new ProviderException("HTTP failed: " + response.getStatusLine().getStatusCode());
                 }
                 String responseString = EntityUtils.toString(entity);
 
                 CodingHybridResponse hr = objectMapper.readValue(responseString, CodingHybridResponse.class);
                 if (hr == null) {
-                    throw new ProviderException("HTTP Failed: " + responseString);
+                    throw new ProviderException("HTTP failed: response is null");
                 }
                 CodingHybridResponse.Response hrr = hr.getResponse();
                 if (hrr.getError() != null) {
-                    throw new ProviderException("HTTP Failed: " + hrr.getError().getCode() + ":" + hrr.getError().getMessage());
+                    throw new ProviderException("HTTP failed: " + hrr.getError().getCode() + ": " + hrr.getError().getMessage());
                 }
                 return hrr;
             } catch (Exception e) {
-                throw new ProviderException("HTTP Failed", e);
+                throw new ProviderException("HTTP failed", e);
             }
 
         } catch (Exception e) {
-            throw new ProviderException("HTTP Failed", e);
+            throw new ProviderException("HTTP failed", e);
         }
     }
 
@@ -104,12 +105,12 @@ public class CodingRepositoryProvider implements Provider {
         // decode target
         String[] split = target.split("@", 2);
         if (split.length != 2) {
-            throw new ProviderException("Invalid target format");
+            throw new ProviderException("Target malformed: " + target);
         }
 
         String[] split2 = split[0].split("/", 3);
         if (split2.length != 3) {
-            throw new ProviderException("Invalid target format");
+            throw new ProviderException("Target malformed: " + target);
         }
         this.tenant = split2[0];
         this.project = split2[1];
@@ -117,42 +118,58 @@ public class CodingRepositoryProvider implements Provider {
 
         String[] split3 = split[1].split(":", 2);
         if (split3.length != 2) {
-            throw new ProviderException("Invalid target format");
+            throw new ProviderException("Target malformed: " + target);
         }
         this.branch = split3[0];
         this.path = split3[1];
     }
 
     @Override
-    public Map<String, Object> fetch() throws ProviderException {
-        CodingHybridResponse.Response res = invokeAPI("DescribeGitFile", Map.of(
-                "DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(),
-                "Ref", getBranch(),
-                "Path", getPath()
-        ));
+    public Object fetch() throws ProviderException {
+        CodingHybridResponse.Response res = invokeAPI("DescribeGitFile", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "Path", getPath()));
         CodingHybridResponse.Response.GitFile gf = res.getGitFile();
 
         if (gf == null) {
-            throw new ProviderException("field 'GitFile' not found");
+            throw new ProviderException("'GitFile' is missing");
         }
         if (!"base64".equalsIgnoreCase(gf.getEncoding())) {
-            throw new ProviderException("Unsupported encoding: " + gf.getEncoding());
+            throw new ProviderException("Encoding not supported: " + gf.getEncoding());
         }
         String content = gf.getContent();
         if (content == null || content.isBlank()) {
-            throw new ProviderException("Content field not found");
+            throw new ProviderException("'Content' is missing");
         }
+        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(Base64.getDecoder().decode(content), Map.class);
+            return objectMapper.readValue(Base64.getDecoder().decode(content), Object.class);
         } catch (Exception e) {
-            throw new ProviderException("Failed to decode content", e);
+            throw new ProviderException("Failed to unmarshal value", e);
         }
     }
 
     @Override
-    public void update(Map<String, Object> data) throws ProviderException {
-        System.out.println(data);
-    }
+    public void update(Object data) throws ProviderException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        String content;
+        try {
+            content = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+        } catch (Exception e) {
+            throw new ProviderException("Failed to marshal value", e);
+        }
 
+        CodingHybridResponse.Response response = invokeAPI("DescribeGitCommitInfos", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "PageNumber", 1, "PageSize", 1));
+        List<CodingHybridResponse.Response.Commit> commits = response.getCommits();
+        if (commits == null || commits.isEmpty()) {
+            throw new ProviderException("No commits found in branch: " + getBranch());
+        }
+        String sha = commits.get(0).getSha();
+        if (sha == null || sha.isBlank()) {
+            throw new ProviderException("No commit hash found for branch: " + getBranch());
+        }
+        CodingHybridResponse.Response response1 = invokeAPI("ModifyGitFiles", Map.of("DepotPath", getTenant() + "/" + getProject() + "/" + getRepository(), "Ref", getBranch(), "LastCommitSha", sha, "Message", "ci: update " + getPath(), "GitFiles", List.of(Map.of("Path", getPath(), "Content", content))));
+        CodingHybridResponse.Response.Commit gitCommit = response1.getGitCommit();
+        if (gitCommit == null || gitCommit.getSha() == null || gitCommit.getSha().isBlank()) {
+            throw new ProviderException("Failed to create commit");
+        }
+    }
 }

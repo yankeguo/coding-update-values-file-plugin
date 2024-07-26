@@ -1,4 +1,4 @@
-package com.yankeguo.jenkins.plugins.updateremotefile;
+package com.yankeguo.jenkins.plugins.modstate;
 
 public class ProviderException extends Exception {
     public ProviderException(String message) {

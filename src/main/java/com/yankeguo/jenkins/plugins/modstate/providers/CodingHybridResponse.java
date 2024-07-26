@@ -1,4 +1,4 @@
-package com.yankeguo.jenkins.plugins.updateremotefile.providers;
+package com.yankeguo.jenkins.plugins.modstate.providers;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

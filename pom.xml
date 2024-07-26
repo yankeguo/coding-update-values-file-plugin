@@ -11,11 +11,11 @@
     </parent>
 
     <groupId>com.yankeguo.jenkins.plugins</groupId>
-    <artifactId>update-remote-file</artifactId>
+    <artifactId>modstate</artifactId>
     <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
 
-    <name>Update Remote File Plugin</name>
+    <name>Modstate Plugin</name>
     <url>https://github.com/yankeguo/${project.artifactId}-plugin</url>
     <licenses>
         <license>

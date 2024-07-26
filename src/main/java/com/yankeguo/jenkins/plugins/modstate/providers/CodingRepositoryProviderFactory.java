@@ -1,8 +1,8 @@
-package com.yankeguo.jenkins.plugins.updateremotefile.providers;
+package com.yankeguo.jenkins.plugins.modstate.providers;
 
-import com.yankeguo.jenkins.plugins.updateremotefile.Provider;
-import com.yankeguo.jenkins.plugins.updateremotefile.ProviderException;
-import com.yankeguo.jenkins.plugins.updateremotefile.ProviderFactory;
+import com.yankeguo.jenkins.plugins.modstate.Provider;
+import com.yankeguo.jenkins.plugins.modstate.ProviderException;
+import com.yankeguo.jenkins.plugins.modstate.ProviderFactory;
 
 public class CodingRepositoryProviderFactory implements ProviderFactory {
     @Override
